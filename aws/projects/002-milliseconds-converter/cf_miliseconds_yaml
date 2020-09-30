@@ -92,10 +92,10 @@ Resources:
             yum update -y
             yum install - python3
             pip3 install flask
-            wget 
+            wget https://raw.githubusercontent.com/mekevinbright/CW-AWS-DEVOPS-WORKING/master/aws/projects/002-milliseconds-converter/milisec_app.py
             mkdir templates ; cd templates
-            wget 
-            wget 
+            wget https://raw.githubusercontent.com/mekevinbright/CW-AWS-DEVOPS-WORKING/master/aws/projects/002-milliseconds-converter/templates/index.html
+            wget https://raw.githubusercontent.com/mekevinbright/CW-AWS-DEVOPS-WORKING/master/aws/projects/002-milliseconds-converter/templates/result.html
             cd ..
             python3 ./app.py
   
