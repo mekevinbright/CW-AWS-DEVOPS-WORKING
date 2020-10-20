@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: This template deploys an t2.micro EC2 Linux instance which runs an 
+  application named miliseconds convertor that converts the given time in miliseconds 
+  into hours, miutes, and seconds. The application is coded in Python and deployed as 
+  a web application with Flask on AWS Application Load Balancer with Auto Scaling Group
+  of Amazon Linux 2 Elastic Compute Cloud(EC2) within default VPC. For deploying EC2, keypair is defined as a parameter.
+  
+Parameters:
+  Keyname:
+    Description: Allows acces to EC2 instance. 
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  ALBSecGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: ALBSecGroup allows HTTP (80) connection from anywhere #required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Miliseconds_ALBSecGroup
+  InstanceSecGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: InstanceSecGroup allows HTTP(80) connection from anywhere #required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp:  0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: Miliseconds_InstanceSecGroup
+
+
+  MillisecondsTargetGroup:
+  Type: "AWS::ElasticLoadBalancingV2::TargetGroup"
+  Properties:
+    HealthCheckEnabled: True
+    HealthCheckIntervalSeconds: 10
+    HealthCheckPath: /
+    HealthCheckPort: traffic-port
+    HealthCheckProtocol: HTTP
+    HealthCheckTimeoutSeconds: 5
+    HealthyThresholdCount: 3
+    Name: MillisecTargetGroup 
+    Port: 80
+    Protocol: HTTP
+    Tags:
+      - Key: Name
+        Value: MS_TargetGroup
+    TargetGroupAttributes:
+      - TargetGroupAttribute
+    TargetType: String
+    Targets:
+      - TargetDescription
+    UnhealthyThresholdCount: 2
+
+  MillisecondsLoadBalancer:
+    Type: "AWS::ElasticLoadBalancing::LoadBalancer"
+    Properties:
+      Listeners: #required
+        - MillisecondsListener:
+          Type: "AWS::ElasticLoadBalancingV2::Listener"
+          Properties:
+            DefaultActions: #required
+              - Type: forward
+                TargetGroupArn: !Ref MillisecondsTargetGroup
+            LoadBalancerArn: !Ref MillisecondsLoadBalancer #required
+            Port: 80 #required
+            Protocol: HTTP #required
+      LoadBalancerName: MillisecLoadBalancer
+      SecurityGroups:
+        - !Ref ALBSecGroup
+      Tag:  
+        - Key: Name
+          Value: MillisecondsLoadBalancer
+
+
+  MillisecondsLaunchConfig:
+    Type: "AWS::AutoScaling::LaunchConfiguration"
+    Properties:
+      ImageId: ami-0947d2ba12ee1ff75 #required
+      InstanceType: t2.micro #required
+      KeyName: !Ref Keyname
+      LaunchConfigurationName: MillisecLaunchConfig
+      SecurityGroups:
+        - !Ref InstanceSecGroup
+      UserData: 
+        Fn::Base64:
+          !Sub |
+            #! /bin/bash
+            mkdir milliseconds ; cd milliseconds
+            yum update -y
+            yum install - python3
+            pip3 install flask
+            wget https://raw.githubusercontent.com/mekevinbright/CW-AWS-DEVOPS-WORKING/master/aws/projects/002-milliseconds-converter/milisec_app.py
+            mkdir templates ; cd templates
+            wget https://raw.githubusercontent.com/mekevinbright/CW-AWS-DEVOPS-WORKING/master/aws/projects/002-milliseconds-converter/templates/index.html
+            wget https://raw.githubusercontent.com/mekevinbright/CW-AWS-DEVOPS-WORKING/master/aws/projects/002-milliseconds-converter/templates/result.html
+            cd ..
+            python3 ./app.py
+
+
+
+  MillisecondsAutoScaling:
+    Type: "AWS::AutoScaling::AutoScalingGroup"
+    Properties:
+      AutoScalingGroupName: MillisecAutoScaling
+      DesiredCapacity: 2
+      HealthCheckGracePeriod: 90
+      HealthCheckType: ELB
+      LaunchConfigurationName: !Ref MillisecondsLaunchConfig
+      MaxSize: 4 #required
+      MinSize: 1 #required
+      Tags:
+        - Key: Name
+          PropagateAtLaunch: true
+          Value: MillisecAutoScaling
+      TargetGroupARNs:
+        - !Ref MillisecondsTargetGroup
+
+  
+Outputs:
+  PublicDNS:
+    Description: Miliseconds Converter Application Website URL (Public DNS Name of the EC2 instance)
+    Value: !Sub
+      - http://${PublicAddress}
+      - PublicAddress: !GetAtt MillisecondsInstance.PublicDnsName
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
