@@ -1,0 +1,9 @@
+secretGenerator:
+- name: mysql-pass
+  literals:
+  - rootpass=P123456p
+  - password=Clarusway_1
+resources:
+  - 203mysql.yaml
+  - 203web.yaml
+  - 203search.yaml
